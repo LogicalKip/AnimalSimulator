@@ -16,15 +16,15 @@ import model.Predator;
 public class Simulator {
 	List<Animal> allAnimals;
 	List<Grass> allGrass;
+	List<Animal> newborns;
 	
 	public final int MAP_SIZE = 700;
 	
 	public final int MAX_DISTANCE_TO_EAT = 30;
-	
 
 	public final int STARTING_FOOD_SOURCES = MAP_SIZE/50;
 	public final int STARTING_ANIMALS = STARTING_FOOD_SOURCES;
-	public final int STARTING_PREDATORS = STARTING_ANIMALS/3;
+	public final int STARTING_PREDATORS = STARTING_ANIMALS/2;
 	
 	
 	private int ticksElapsed;
@@ -32,6 +32,7 @@ public class Simulator {
 	public Simulator() throws IllegalArgumentException {
 		ticksElapsed = 0;
 		allAnimals = new LinkedList<Animal>();
+		newborns = new LinkedList<Animal>();
 		allGrass = new LinkedList<Grass>();
 		
 		Random r = new Random();
@@ -76,7 +77,14 @@ public class Simulator {
 			a.nextTick();
 		}
 		
+		allAnimals.addAll(newborns);
+		newborns = new LinkedList<Animal>();
+		
 		ticksElapsed++;
+	}
+	
+	public void addBabyToWorld(Animal baby) {
+		newborns.add(baby);
 	}
 	
 	private void callDetectionMethods() {
@@ -84,7 +92,7 @@ public class Simulator {
 			for (Grass f : allGrass) {
 				double distanceToFood = euclidianDistance(a.getPosX(), a.getPosY(), f.getPosX(), f.getPosY());
 				if (Math.ceil(distanceToFood) < a.getDetectionDistance()) {
-					a.onFoodDetected(f);
+					a.onGrassDetected(f);
 				}
 			}
 		}

@@ -13,6 +13,7 @@ public class Boui extends Animal {
 		improveSpeed(this.getAdnPoints());
 	}
 
+	
 	@Override
 	public void behave() {
 		randomMoves();
@@ -27,12 +28,18 @@ public class Boui extends Animal {
 	}
 
 	@Override
-	public void onFoodDetected(Grass f) {
+	public void onGrassDetected(Grass f) {
 		moveTowards(f.getPosX(), f.getPosY());
 	}
 
 	@Override
 	protected void chooseInitialDiet() {
 		beHerbivore();
+	}
+
+
+	@Override
+	protected void onBirth(Animal parent1, Animal parent2) {
+		improveSpeed(this.getAdnPoints());
 	}
 }
