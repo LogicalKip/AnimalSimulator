@@ -50,9 +50,6 @@ public class Predator extends Animal {
 
 	@Override
 	protected void onBirth(Animal parent1, Animal parent2) {
-		this.improveAttack(Animal.ATTACK_IMPROVING_COST);// Improve once, with just enough points
 		this.improveSpeed(getAdnPoints());   // Improve with all that's left	
 	}
-	
-	
 }

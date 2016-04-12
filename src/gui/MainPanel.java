@@ -43,6 +43,7 @@ public class MainPanel extends JPanel implements ActionListener {
 			g.fillOval(	f.getPosX() - radius, 
 					f.getPosY() - radius, 
 					radius*2, radius*2);	
+			g.drawString(Integer.toString(f.getAmount()), f.getPosX(), f.getPosY() - radius);
 		}
 
 		for (Animal a : this.simulator.getAllAnimals()) {

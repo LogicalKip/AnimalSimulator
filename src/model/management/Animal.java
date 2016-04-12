@@ -66,18 +66,19 @@ public abstract class Animal implements Cloneable {
 	final private int pubertyAge;
 
 
-	final static public int ADN_GAIN_TO_NEWBORN = 2;
-
 	final static public int MAX_DISTANCE_TO_ATTACK = 30;
 	final static public int MAX_DISTANCE_TO_MATE = 50;
 
-	final static public int DEFAULT_FULLNESS_PER_BITE = 500;
+	final static public int DEFAULT_FULLNESS_PER_CARNIVOROUS_BITE = 500;
 	final static public int DEFAULT_SPEED = 3;
 	final static public int DEFAULT_DETECTION_DISTANCE = 200;
 	final static public int DEFAULT_MAX_FULLNESS = 200;
 	final static public int DEFAULT_TIME_BETWEEN_MATING = 50; // TODO being able to improve mating attributes
 	final static public int DEFAULT_PUBERTY_AGE = 20;
 
+	
+	/** Evolution-related constants **/
+	final static public int ADN_GAIN_TO_NEWBORN = 2;
 	final static public int STARTING_ADN_POINTS = 20;
 	final static public int SPEED_IMPROVING_COST = 3;
 	final static public int DETECTION_DISTANCE_IMPROVING_COST = 2;
@@ -90,6 +91,7 @@ public abstract class Animal implements Cloneable {
 	/**
 	 * Constructor for animals already in the game when it starts.
 	 * For newborns, see {@link #mate(Animal)} and {@link #onBirth(Animal, Animal)}
+	 * Calls {@link #chooseInitialDiet()}
 	 * @param x Starting X position
 	 * @param y Starting Y position
 	 * @param s
@@ -169,9 +171,9 @@ public abstract class Animal implements Cloneable {
 
 	/**
 	 * /!\ The baby will be created using the the Object#clone() method. You may want to override it depending on your Animal implementation.
-	 * Tries to create an offspring, if all requirements, such as being old enough, and not being too soon after a previous mating, are fulfilled
+	 * Tries to create an offspring, if all requirements, such as being old enough, and not being too soon after a previous mating, are fulfilled.
 	 * Some attributes will be copied from the parents.
-	 * @param mate the mate
+	 * @param mate the other parent
 	 */
 	synchronized public final void mate(Animal mate) {
 		if (this.isAlive() && mate.isAlive()) {
@@ -188,8 +190,8 @@ public abstract class Animal implements Cloneable {
 								baby.posX = (this.posX + mate.posX)/2;//TODO when delivering the baby after carrying, should be next to mom and nothing to do with the dad
 								baby.posY = (this.posY + mate.posY)/2;
 								baby.age = 0;
-								baby.maxAdnPoints = this.maxAdnPoints + ADN_GAIN_TO_NEWBORN;
-								baby.adnPoints = baby.maxAdnPoints;
+								baby.maxAdnPoints += ADN_GAIN_TO_NEWBORN;
+								baby.adnPoints += ADN_GAIN_TO_NEWBORN;
 								baby.fullness = Math.max(this.fullness, mate.fullness);
 								baby.onBirth(this, mate);
 
@@ -317,7 +319,7 @@ public abstract class Animal implements Cloneable {
 
 	final void eatFrom(Grass f) {
 		if (this.isAlive() && this.isHerbivore()) {
-			this.fullness += DEFAULT_FULLNESS_PER_BITE;
+			this.fullness += f.beingEaten();
 			if (this.fullness > this.maxFullness) {
 				this.fullness = this.maxFullness;
 			}	
@@ -326,7 +328,7 @@ public abstract class Animal implements Cloneable {
 
 	final void eatFrom(Animal a) {
 		if (this.isAlive() && a.isDead() && this.isCarnivore()) {
-			this.fullness += DEFAULT_FULLNESS_PER_BITE;
+			this.fullness += DEFAULT_FULLNESS_PER_CARNIVOROUS_BITE;
 			if (this.fullness > this.maxFullness) {
 				this.fullness = this.maxFullness;
 			}	

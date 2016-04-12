@@ -76,6 +76,9 @@ public class Simulator {
 		for (Animal a : allAnimals) {
 			a.nextTick();
 		}
+		for (Grass g : allGrass) {
+			g.nextTick();
+		}
 		
 		allAnimals.addAll(newborns);
 		newborns = new LinkedList<Animal>();
@@ -108,12 +111,16 @@ public class Simulator {
 	
 	private void makeAnimalsEat() {
 		List<Animal> animalsToRemove = new LinkedList<Animal>();
+		List<Grass> grassToRemove = new LinkedList<Grass>();
 		for (Animal a : allAnimals) {
 			if (a.isHerbivore()) {
 				for (Grass f : allGrass) {
 					double distanceToGrass = euclidianDistance(a.getPosX(), a.getPosY(), f.getPosX(), f.getPosY());
 					if (distanceToGrass <= MAX_DISTANCE_TO_EAT) {
 						a.eatFrom(f);
+						if (f.getAmount() == 0) {
+							grassToRemove.add(f);
+						}
 					}
 				}
 			} 
@@ -131,6 +138,7 @@ public class Simulator {
 		}
 		
 		allAnimals.removeAll(animalsToRemove);
+		allGrass.removeAll(grassToRemove);
 	}
 	
 	public static final double euclidianDistance(int x1, int y1, int x2, int y2) {
