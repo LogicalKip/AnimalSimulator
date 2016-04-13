@@ -318,7 +318,7 @@ public abstract class Animal implements Cloneable {
 	}
 
 	final void eatFrom(Grass f) {
-		if (this.isAlive() && this.isHerbivore()) {
+		if (this.isAlive() && this.isHerbivore() && this.fullness < this.maxFullness) {
 			this.fullness += f.beingEaten();
 			if (this.fullness > this.maxFullness) {
 				this.fullness = this.maxFullness;
@@ -429,7 +429,7 @@ public abstract class Animal implements Cloneable {
 		setDirY(resY);
 	}
 
-	public final void changeImage(String tileFileName) {
+	public final void changeImage(final String tileFileName) {
 		try {
 			this.tile = ImageIO.read(new File(tileFileName));
 		} catch (IOException e) {

@@ -7,16 +7,26 @@ import model.management.Grass;
 import model.management.Simulator;
 
 public class Boui extends Animal {
+	private Grass nearestGrass;
+
 	public Boui(int x, int y, Simulator s) throws IllegalArgumentException {
 		super(x, y, s);
 		changeImage("guinea_pig_icon.gif");
 		improveSpeed(this.getAdnPoints());
+		this.nearestGrass = null;
 	}
 
-	
+
 	@Override
 	public void behave() {
-		randomMoves();
+		if (nearestGrass != null && nearestGrass.getAmount() == 0) {
+			nearestGrass = null;
+		}
+		if (nearestGrass == null) {
+			randomMoves();			
+		} else {
+			moveTowards(nearestGrass.getPosX(), nearestGrass.getPosY());
+		}
 	}
 
 	private void randomMoves() {
@@ -28,8 +38,11 @@ public class Boui extends Animal {
 	}
 
 	@Override
-	public void onGrassDetected(Grass f) {
-		moveTowards(f.getPosX(), f.getPosY());
+	public void onGrassDetected(Grass g) {
+		if (nearestGrass == null || Simulator.euclidianDistance(this.getPosX(), this.getPosY(), g.getPosX(), g.getPosY()) <= 
+				Simulator.euclidianDistance(this.getPosX(), this.getPosY(), nearestGrass.getPosX(), nearestGrass.getPosY())) {
+			this.nearestGrass = g;
+		}
 	}
 
 	@Override

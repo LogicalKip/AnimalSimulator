@@ -18,12 +18,14 @@ public class Simulator {
 	List<Grass> allGrass;
 	List<Animal> newborns;
 	
-	public final int MAP_SIZE = 700;
+	public final int MAP_WIDTH = 1300;
+	public final int MAP_HEIGHT = 700;
+	
 	
 	public final int MAX_DISTANCE_TO_EAT = 30;
 
-	public final int STARTING_FOOD_SOURCES = MAP_SIZE/50;
-	public final int STARTING_ANIMALS = STARTING_FOOD_SOURCES;
+	public final int STARTING_VEGETATION = (MAP_WIDTH+MAP_HEIGHT)/100;
+	public final int STARTING_ANIMALS = STARTING_VEGETATION;
 	public final int STARTING_PREDATORS = STARTING_ANIMALS/2;
 	
 	
@@ -37,20 +39,20 @@ public class Simulator {
 		
 		Random r = new Random();
 		for (int i = 0 ; i < STARTING_ANIMALS ; i++) {
-			int x = r.nextInt(MAP_SIZE);
-			int y = r.nextInt(MAP_SIZE);
+			int x = r.nextInt(MAP_WIDTH);
+			int y = r.nextInt(MAP_HEIGHT);
 			allAnimals.add(new Boui(x, y, this));
 		}
 		for (int i = 0 ; i < STARTING_PREDATORS ; i++) {
-			int x = r.nextInt(MAP_SIZE);
-			int y = r.nextInt(MAP_SIZE);
+			int x = r.nextInt(MAP_WIDTH);
+			int y = r.nextInt(MAP_HEIGHT);
 			allAnimals.add(new Predator(x, y, this));
 		}
 		
 		
-		for (int i = 0 ; i < STARTING_FOOD_SOURCES ; i++) {
-			int x = r.nextInt(MAP_SIZE);
-			int y = r.nextInt(MAP_SIZE);
+		for (int i = 0 ; i < STARTING_VEGETATION ; i++) {
+			int x = r.nextInt(MAP_WIDTH);
+			int y = r.nextInt(MAP_HEIGHT);
 			allGrass.add(new Grass(x, y));
 		}
 	}
@@ -66,7 +68,7 @@ public class Simulator {
 			a.behave();
 		}
 		for (Animal a : allAnimals) {
-			a.move(MAP_SIZE, MAP_SIZE);
+			a.move(MAP_WIDTH, MAP_HEIGHT);
 			a.gettingHungry();
 		}
 		
