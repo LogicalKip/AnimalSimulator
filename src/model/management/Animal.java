@@ -21,6 +21,8 @@ public abstract class Animal implements Cloneable {
 
 	private BufferedImage tile;
 
+	private BufferedImage deadTile;
+
 	private Simulator simulator;
 
 	private boolean isDead;
@@ -62,6 +64,8 @@ public abstract class Animal implements Cloneable {
 	private int age;
 
 	private int maxAdnPoints;
+	
+	private int generation;
 
 	final private int pubertyAge;
 
@@ -70,8 +74,8 @@ public abstract class Animal implements Cloneable {
 	final static public int MAX_DISTANCE_TO_MATE = 50;
 
 	final static public int DEFAULT_FULLNESS_PER_CARNIVOROUS_BITE = 500;
-	final static public int DEFAULT_SPEED = 3;
-	final static public int DEFAULT_DETECTION_DISTANCE = 200;
+	final static public int DEFAULT_SPEED = 2;
+	final static public int DEFAULT_DETECTION_DISTANCE = 100;
 	final static public int DEFAULT_MAX_FULLNESS = 200;
 	final static public int DEFAULT_TIME_BETWEEN_MATING = 50; // TODO being able to improve mating attributes
 	final static public int DEFAULT_PUBERTY_AGE = 20;
@@ -121,6 +125,7 @@ public abstract class Animal implements Cloneable {
 		this.carnivore = false;
 		this.simulator = s;
 		this.fullness = (new Random().nextInt(this.maxFullness/2) + this.maxFullness/2);
+		this.generation = 1;
 
 		this.chooseInitialDiet();
 	}
@@ -193,6 +198,7 @@ public abstract class Animal implements Cloneable {
 								baby.maxAdnPoints += ADN_GAIN_TO_NEWBORN;
 								baby.adnPoints += ADN_GAIN_TO_NEWBORN;
 								baby.fullness = Math.max(this.fullness, mate.fullness);
+								baby.generation++;
 								baby.onBirth(this, mate);
 
 								simulator.addBabyToWorld(baby);
@@ -381,15 +387,15 @@ public abstract class Animal implements Cloneable {
 	/**
 	 * Called every tick, for every grass near the animal (near means less than {@link Animal#detectionDistance})
 	 * Must be overridden to be used
-	 * @param f
+	 * @param g the grass detected
 	 */
-	public void onGrassDetected(Grass f) {
+	public void onGrassDetected(Grass g) {
 	}
 
 	/**
 	 * Called every tick, for every other animal near the animal (near means less than {@link Animal#detectionDistance})
 	 * Must be overridden to be used
-	 * @param a
+	 * @param a the animal detected
 	 */
 	public void onAnimalDetected(Animal a) {
 	}
@@ -436,6 +442,14 @@ public abstract class Animal implements Cloneable {
 			System.err.println(tileFileName + " couldn't be loaded. Is it at the root of the app ?");
 		}
 	}
+	
+	public final void changeDeadImage(final String tileFileName) {
+		try {
+			this.deadTile = ImageIO.read(new File(tileFileName));
+		} catch (IOException e) {
+			System.err.println(tileFileName + " couldn't be loaded. Is it at the root of the app ?");
+		}
+	}
 
 	public final BufferedImage getTile() {
 		return tile;
@@ -463,5 +477,13 @@ public abstract class Animal implements Cloneable {
 
 	public boolean isCarnivore() {
 		return carnivore;
+	}
+
+	public int getGeneration() {
+		return generation;
+	}
+
+	public BufferedImage getDeadTile() {
+		return deadTile;
 	}
 }
