@@ -3,12 +3,8 @@
  */
 package model.management;
 
-import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.IOException;
 import java.util.Random;
-
-import javax.imageio.ImageIO;
 
 
 //TODO spend 10 one time (if it costs 10) will improve once. Spend 1 ten times will improve nothing. Should remember "wasted" points and pile up later.
@@ -19,9 +15,9 @@ import javax.imageio.ImageIO;
  */
 public abstract class Animal implements Cloneable {
 
-	private BufferedImage tile;
+	private String tilePath;
 
-	private BufferedImage deadTile;
+	private String deadTilePath;
 
 	private Simulator simulator;
 
@@ -76,8 +72,8 @@ public abstract class Animal implements Cloneable {
 	final static public int DEFAULT_FULLNESS_PER_CARNIVOROUS_BITE = 500;
 	final static public int DEFAULT_SPEED = 2;
 	final static public int DEFAULT_DETECTION_DISTANCE = 100;
-	final static public int DEFAULT_MAX_FULLNESS = 200;
-	final static public int DEFAULT_TIME_BETWEEN_MATING = 50; // TODO being able to improve mating attributes
+	final static public int DEFAULT_MAX_FULLNESS = 300;
+	final static public int DEFAULT_TIME_BETWEEN_MATING = 150; // TODO being able to improve mating attributes
 	final static public int DEFAULT_PUBERTY_AGE = 20;
 
 	
@@ -436,23 +432,23 @@ public abstract class Animal implements Cloneable {
 	}
 
 	public final void changeImage(final String tileFileName) {
-		try {
-			this.tile = ImageIO.read(new File(tileFileName));
-		} catch (IOException e) {
+		if (new File(tileFileName).exists()) {
+			this.tilePath = tileFileName;
+		} else {
 			System.err.println(tileFileName + " couldn't be loaded. Is it at the root of the app ?");
 		}
 	}
 	
 	public final void changeDeadImage(final String tileFileName) {
-		try {
-			this.deadTile = ImageIO.read(new File(tileFileName));
-		} catch (IOException e) {
+		if (new File(tileFileName).exists()) {
+			this.deadTilePath = tileFileName;
+		} else {
 			System.err.println(tileFileName + " couldn't be loaded. Is it at the root of the app ?");
 		}
 	}
 
-	public final BufferedImage getTile() {
-		return tile;
+	public final String getTilePath() {
+		return tilePath;
 	}
 
 	public final int getMaxFullness() {
@@ -483,7 +479,7 @@ public abstract class Animal implements Cloneable {
 		return generation;
 	}
 
-	public BufferedImage getDeadTile() {
-		return deadTile;
+	public String getDeadTilePath() {
+		return deadTilePath;
 	}
 }
