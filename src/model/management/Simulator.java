@@ -3,11 +3,12 @@
  */
 package model.management;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 
-import model.Boui;
 import model.Predator;
 
 /**
@@ -19,7 +20,7 @@ public class Simulator {
 	List<Animal> newborns;
 	
 	public final int MAP_WIDTH = 1300;
-	public final int MAP_HEIGHT = 700;
+	public final int MAP_HEIGHT = 620;
 	
 	
 	public final int MAX_DISTANCE_TO_EAT = 30;
@@ -31,7 +32,7 @@ public class Simulator {
 	
 	private int ticksElapsed;
 	
-	public Simulator() throws IllegalArgumentException {
+	public Simulator(Class<?> race) throws IllegalArgumentException {
 		ticksElapsed = 0;
 		allAnimals = new LinkedList<Animal>();
 		newborns = new LinkedList<Animal>();
@@ -41,15 +42,20 @@ public class Simulator {
 		for (int i = 0 ; i < STARTING_ANIMALS ; i++) {
 			int x = r.nextInt(MAP_WIDTH);
 			int y = r.nextInt(MAP_HEIGHT);
-			allAnimals.add(new Boui(x, y, this));
+
+			try {
+				Constructor<?> constructor = race.getConstructor(int.class, int.class, Simulator.class);
+				Animal animalInstance = (Animal) constructor.newInstance(x, y, this);
+				allAnimals.add(animalInstance);
+			} catch (NoSuchMethodException | SecurityException | InstantiationException | IllegalAccessException | InvocationTargetException e) {
+				e.printStackTrace();
+			}
 		}
 		for (int i = 0 ; i < STARTING_PREDATORS ; i++) {
 			int x = r.nextInt(MAP_WIDTH);
 			int y = r.nextInt(MAP_HEIGHT);
 			allAnimals.add(new Predator(x, y, this));
 		}
-		
-		
 		for (int i = 0 ; i < STARTING_VEGETATION ; i++) {
 			int x = r.nextInt(MAP_WIDTH);
 			int y = r.nextInt(MAP_HEIGHT);
