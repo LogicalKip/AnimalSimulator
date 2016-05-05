@@ -87,14 +87,13 @@ public abstract class Animal implements Cloneable {
 	final static public int HERBIVORE_COST = 10;
 	final static public int CARNIVORE_COST = 7;
 
-
 	/**
 	 * Constructor for animals already in the game when it starts.
 	 * For newborns, see {@link #mate(Animal)} and {@link #onBirth(Animal, Animal)}
 	 * Calls {@link #chooseInitialDiet()}
 	 * @param x Starting X position
 	 * @param y Starting Y position
-	 * @param s
+	 * @param s the simulator in which the animal will start
 	 * @throws IllegalArgumentException
 	 */
 	public Animal(int x, int y, Simulator s) throws IllegalArgumentException {
@@ -207,6 +206,15 @@ public abstract class Animal implements Cloneable {
 			}
 		}
 	}
+	
+	public Animal getClone() {
+		try {
+			return (Animal) this.clone();
+		} catch (CloneNotSupportedException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
 
 	/**
 	 * Called in the baby object once he's born.
@@ -220,8 +228,8 @@ public abstract class Animal implements Cloneable {
 
 
 	/**
-	 * @param a
-	 * @return true if they are the very same species, therefore mate potential
+	 * @param a the animal compared to
+	 * @return true if they are the very same species (not a subclass), therefore mate potential
 	 */
 	public final boolean sameSpeciesAs(Animal a) {
 		return this.getClass().equals(a.getClass());
@@ -229,11 +237,15 @@ public abstract class Animal implements Cloneable {
 
 
 	/**
-	 * Spend points to be herbivorous or carnivorous.
-	 */
+	 * Spend points to be herbivorous or carnivorous with {@link Animal#beHerbivore()} and/or {@link Animal#beCarnivore()}
+ 	 */
 	protected abstract void chooseInitialDiet();
 
 
+	/**
+	 * Spends {@link Animal#HERBIVORE_COST} points to allow the animal to eat plants.
+	 * Does not exclude the possibility to {@link Animal#beCarnivore()}
+	 */
 	synchronized public final void beHerbivore() {
 		if (this.adnPoints >= HERBIVORE_COST && !this.herbivore) {
 			this.herbivore = true;
@@ -241,6 +253,10 @@ public abstract class Animal implements Cloneable {
 		}
 	}
 
+	/**
+	 * Spends {@link Animal#CARNIVORE_COST} points to allow the animal to eat dead animals
+	 * Does not exclude the possibility to {@link Animal#beHerbivore()}
+	 */
 	synchronized public final void beCarnivore() {
 		if (this.adnPoints >= CARNIVORE_COST && !this.carnivore) {
 			this.carnivore = true;
@@ -383,7 +399,7 @@ public abstract class Animal implements Cloneable {
 	/**
 	 * Called every tick, for every grass near the animal (near means less than {@link Animal#detectionDistance})
 	 * Must be overridden to be used
-	 * @param g the grass detected
+	 * @param g the grass detected, as it was when detected. This is not the real reference and won't be updated. Think 'snapshot'
 	 */
 	public void onGrassDetected(Grass g) {
 	}
@@ -391,7 +407,7 @@ public abstract class Animal implements Cloneable {
 	/**
 	 * Called every tick, for every other animal near the animal (near means less than {@link Animal#detectionDistance})
 	 * Must be overridden to be used
-	 * @param a the animal detected
+	 * @param a the animal detected, as it was when detected. This is not the real reference and won't be updated. Think 'snapshot'
 	 */
 	public void onAnimalDetected(Animal a) {
 	}
@@ -403,9 +419,7 @@ public abstract class Animal implements Cloneable {
 	}
 
 	/**
-	 * Utility method. Calls {@link #setDirX(double)} and {@link #setDirY(double)} such that the animal's direction is towards given point.
-	 * @param x
-	 * @param y
+	 * Utility method. Calls {@link #setDirX(double)} and {@link #setDirY(double)} such that the animal's direction is towards given point, at full speed.
 	 */
 	protected final void moveTowards(final int x, final int y) {
 		double distXToDest = x - this.getPosX();
@@ -429,6 +443,15 @@ public abstract class Animal implements Cloneable {
 
 		setDirX(resX);
 		setDirY(resY);
+	}
+	
+	/**
+	 * Utility method. Calls {@link #setDirX(double)} and {@link #setDirY(double)} such that the animal's direction is away from given point, at full speed.
+	 */
+	protected final void moveAwayFrom(final int x, final int y) {
+		moveTowards(x, y);
+		setDirX(-getDirX());
+		setDirY(-getDirY());
 	}
 
 	public final void changeImage(final String tileFileName) {

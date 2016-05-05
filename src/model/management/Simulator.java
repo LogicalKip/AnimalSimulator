@@ -100,10 +100,10 @@ public class Simulator {
 	
 	private void callDetectionMethods() {
 		for (Animal a : allAnimals) {
-			for (Grass f : allGrass) {
-				double distanceToFood = euclidianDistance(a.getPosX(), a.getPosY(), f.getPosX(), f.getPosY());
+			for (Grass g : allGrass) {
+				double distanceToFood = euclidianDistance(a.getPosX(), a.getPosY(), g.getPosX(), g.getPosY());
 				if (Math.ceil(distanceToFood) < a.getDetectionDistance()) {
-					a.onGrassDetected(f);
+					a.onGrassDetected(g.getClone());
 				}
 			}
 		}
@@ -111,7 +111,7 @@ public class Simulator {
 			for (Animal a2 : allAnimals) {
 				double distance = euclidianDistance(a1.getPosX(), a1.getPosY(), a2.getPosX(), a2.getPosY());
 				if (!a1.equals(a2) && Math.ceil(distance) < a1.getDetectionDistance()) {
-					a1.onAnimalDetected(a2);
+					a1.onAnimalDetected(a2.getClone());
 				}
 			}
 		}

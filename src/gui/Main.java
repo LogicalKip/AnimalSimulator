@@ -16,7 +16,9 @@ import javafx.scene.control.Button;
 import javafx.scene.image.Image;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
+import javafx.stage.Popup;
 import javafx.stage.Stage;
 import model.Boui;
 import model.Predator;
@@ -34,9 +36,9 @@ public class Main extends Application {
 
 	private AnimationTimer timer;
 
-	private Stage theStage;
+	private Stage stage;
 
-	public static final int MS_DELAY = 50;
+	public static final int MS_DELAY = 30;
 	public static final int ANIMAL_SIZE = 10;
 
 	public static void main(String[] args) {
@@ -44,28 +46,23 @@ public class Main extends Application {
 	}
 
 	@Override
-	public void start(Stage stage) {
+	public void start(Stage s) {
 		this.simulator = new Simulator(Boui.class); 
-		this.theStage = stage;
+		this.stage = s;
 
 		setup();
 
-		theStage.show();
+		stage.show();
 	}
 
 	private void setup() {
 		initComponents();
 		
-		timer = new AnimationTimer()
-		{
+		timer = new AnimationTimer() {
 			private long lastUpdate = 0;
-			public void handle(long now)
-			{
-
+			public void handle(long now) {
 				if (now - lastUpdate >= MS_DELAY*1_000_000) {
-
 					lastUpdate = now;
-
 					simulator.nextTick();
 					repaint();					
 				}
@@ -77,14 +74,14 @@ public class Main extends Application {
 	private void initComponents() {
 		Group root = new Group();
 		Scene theScene = new Scene(root);
-		theStage.setScene(theScene);
+		stage.setScene(theScene);
 
 		VBox vbox = new VBox(5);
 
 		Canvas canvas = new Canvas(simulator.MAP_WIDTH, simulator.MAP_HEIGHT);
 
 		Button button = new Button("Change animal AI");
-		final Stage s = theStage;
+		final Stage s = stage;
 		button.setOnAction(new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent event) {
@@ -97,17 +94,15 @@ public class Main extends Application {
 		root.getChildren().add(vbox);
 
 		canvasGraphics = canvas.getGraphicsContext2D();
-		
-		theStage.centerOnScreen();
 	}
 
 	private void onRestartButtonClick(Stage s) {
 		FileChooser chooser = new FileChooser();
-		chooser.setTitle("Select the .class of your not packaged animal class");
+		chooser.setTitle("Select the .class of your (not packaged) animal class");
 		File file = chooser.showOpenDialog(s);
 		if (file != null) {
 			String[] splits = file.getName().split("\\.");
-			if (splits.length == 2 && splits[1].equals("class")) {
+			if (splits.length == 2 && splits[1].equals("class") && !splits[0].equals("")) {
 				String className = splits[0];
 				try {
 					Class<?> race = Class.forName(className);
@@ -117,17 +112,16 @@ public class Main extends Application {
 					if (instance instanceof Animal) {
 						this.simulator = new Simulator(race);
 					} else {
-						System.err.println("It should extend Animal !");//TODO error msg in GUI instead of console
+						errorMsg("It should extend Animal !");
 					}
-
 				} catch (ClassNotFoundException e) {
-					e.printStackTrace();
+					errorMsg("Error while loading class. Are you sure it was not in any package (i.e must be in default package) when it was compiled ? allmyAIs.BestAI.class would not work.");
 				} catch (SecurityException e) {
 					e.printStackTrace();
 				} catch (IllegalArgumentException e) {
 					e.printStackTrace();
 				} catch (NoSuchMethodException e) {
-					e.printStackTrace();
+					errorMsg("Class should have a constructor with the same signature as Animal, and it should call super() with those parameters");
 				} catch (InstantiationException e) {
 					e.printStackTrace();
 				} catch (IllegalAccessException e) {
@@ -136,19 +130,35 @@ public class Main extends Application {
 					e.printStackTrace();
 				}
 			} else {
-				//TODO error msg in GUI instead of console
-				System.err.println("Pick a file like my_own_subclass_of_Animal.class. Make sure it wasn't in a package when it was compiled.");
+				errorMsg("Pick a file like my_own_subclass_of_Animal.class. Make sure it wasn't in a package when it was compiled.");
 			}
 		}
+	}
+	
+	
+	private void errorMsg(String msg) {
+		final Popup popup = new Popup();
+		popup.getContent().add(new Text());
+		Button okButton = new Button("Ok");
+		okButton.setOnAction(new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent event) {
+				popup.hide();
+			}
+		});
+		popup.getContent().add(new Text(msg));
+		popup.getContent().add(okButton);
+		popup.show(stage);
 	}
 
 	private void repaint() {
 		canvasGraphics.clearRect(0, 0, simulator.MAP_WIDTH, simulator.MAP_HEIGHT);
 
 		//DRAW DETECTION DISTANCE
+		canvasGraphics.setGlobalAlpha(0.3);
 		if (drawDetectionDistance) {
 			for (Animal a : simulator.getAllAnimals()) {
-				canvasGraphics.setFill(a instanceof Predator ? Color.PINK : Color.CYAN);
+				canvasGraphics.setFill(a instanceof Predator ? Color.DARKORCHID : Color.CYAN);
 				if (a.isAlive()) {
 					final int radius = a.getDetectionDistance();
 					canvasGraphics.fillOval(a.getPosX() - radius, 
@@ -157,11 +167,12 @@ public class Main extends Application {
 				}
 			}
 		}
+		canvasGraphics.setGlobalAlpha(1);
 
 		//DRAW GRASS
 		for (Grass g : simulator.getAllFoodSources()) {
 			canvasGraphics.setFill(Color.GREEN);
-			int grassRadius = simulator.MAX_DISTANCE_TO_EAT;
+			int grassRadius = g.getAmount()/10;
 			canvasGraphics.fillOval(g.getPosX() - grassRadius, g.getPosY() - grassRadius, grassRadius*2, grassRadius*2);
 			canvasGraphics.fillText(Integer.toString(g.getAmount()),g.getPosX(), g.getPosY() - grassRadius);
 		}

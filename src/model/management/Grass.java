@@ -2,7 +2,7 @@ package model.management;
 
 import java.util.Random;
 
-public class Grass {
+public class Grass implements Cloneable {
 	private final int posX;
 	private final int posY;
 	
@@ -10,7 +10,7 @@ public class Grass {
 	private int age;
 
 	public final static int GROWTH_TIME = 5;
-	public final static int INITIAL_AMOUNT = 500;
+	public final static int MIN_INITIAL_AMOUNT = 500;
 	public final static int FULLNESS_AMOUNT_PER_BITE = 8;
 	
 	
@@ -18,7 +18,16 @@ public class Grass {
 		this.posX = x;
 		this.posY = y;
 		this.age = 0;
-		this.amount = INITIAL_AMOUNT + new Random().nextInt(INITIAL_AMOUNT/2);
+		this.amount = MIN_INITIAL_AMOUNT + new Random().nextInt(MIN_INITIAL_AMOUNT/2);
+	}
+	
+	public Grass getClone() {
+		try {
+			return (Grass) this.clone();
+		} catch (CloneNotSupportedException e) {
+			e.printStackTrace();
+		}
+		return null;
 	}
 
 	public int getPosX() {

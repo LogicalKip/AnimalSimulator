@@ -29,6 +29,10 @@ public class Predator extends Animal {
 			setDirY(r.nextBoolean() ? 1 : (r.nextBoolean() ? 0 : -1));
 		}
 	}
+	
+	private boolean isHungry() {
+		return this.getFullness() < this.getMaxFullness()*0.75;
+	}
 
 	@Override
 	public void onAnimalDetected(Animal a) {
@@ -36,10 +40,12 @@ public class Predator extends Animal {
 		if (a.isAlive()) {
 			if (a instanceof Predator) {
 				this.mate(a);
-			} else {
+			} else if (this.isHungry()){
 				this.moveTowards(a.getPosX(), a.getPosY());
 				this.attack(a);
 			}
+		} else if (this.isHungry()) {
+			this.moveTowards(a.getPosX(), a.getPosY());
 		}
 	}
 
