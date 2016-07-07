@@ -4,17 +4,18 @@ package model;
 import java.util.Random;
 
 import model.management.Animal;
-import model.management.Grass;
+import model.management.DetectedAnimal;
+import model.management.DetectedGrass;
 import model.management.Simulator;
 
-public class Boui extends Animal {
-	private Grass nearestGrass;
+public class GuineaPig extends Animal {
+	private DetectedGrass nearestGrass;
 
 	private final int TIME_BEFORE_LOOKING_ELSEWHERE = 60;
 
 	private boolean fleeing;
 
-	public Boui(int x, int y, Simulator s) throws IllegalArgumentException {
+	public GuineaPig(int x, int y, Simulator s) throws IllegalArgumentException {
 		super(x, y, s);
 		changeImage("guinea_pig_icon.gif");
 		changeDeadImage("guinea_pig_icon_dead.gif");
@@ -49,16 +50,18 @@ public class Boui extends Animal {
 				== 0;
 	}
 
-	private void processGrass(Grass g) {
+	private void processGrass(DetectedGrass g) {
 		if (closeEnoughToEat(nearestGrass)) {
 			if (isHungry()) {
 				sit();
+				eat(g);
 			} else {
 				moveAwayFrom(nearestGrass.getPosX(), nearestGrass.getPosY());
 			}
 		} else {
 			if (isHungry()) {
 				moveTowards(nearestGrass.getPosX(), nearestGrass.getPosY());
+				eat(g);
 			} else {
 				// not hungry, not in grass
 				randomMoves();
@@ -71,12 +74,12 @@ public class Boui extends Animal {
 		this.setDirY(0);
 	}
 
-	private boolean closeEnoughToEat(Grass g) {
+	private boolean closeEnoughToEat(DetectedGrass g) {
 		return Simulator.euclidianDistance(getPosX(), getPosY(), g.getPosX(), g.getPosY()) <= getSimulator().MAX_DISTANCE_TO_EAT;
 	}
 
 	private boolean isHungry() {
-		return this.getFullness() < this.getMaxFullness()*0.75;
+		return this.getFullness() < this.getMaxFullnessValue()*0.75;
 	}
 
 	private void randomMoves() {
@@ -86,17 +89,17 @@ public class Boui extends Animal {
 	}
 
 	@Override
-	public void onGrassDetected(Grass g) {
+	public void onGrassDetected(DetectedGrass g) {
 		if (nearestGrass == null || nearestGrass.getAmount() == 0 || Simulator.euclidianDistance(this.getPosX(), this.getPosY(), g.getPosX(), g.getPosY()) <= Simulator.euclidianDistance(this.getPosX(), this.getPosY(), nearestGrass.getPosX(), nearestGrass.getPosY())) {
 			this.nearestGrass = g;
 		}
 	}
 
 	@Override
-	public void onAnimalDetected(Animal a) {
+	public void onAnimalDetected(DetectedAnimal a) {
 		super.onAnimalDetected(a);
 
-		if (a instanceof Boui) {
+		if (a.getDetectedAnimalClass().equals(this.getClass())) {
 			mate(a);
 		} else if (a.isAlive()) {
 			// Flee
@@ -112,7 +115,7 @@ public class Boui extends Animal {
 
 	@Override
 	protected void onBirth(Animal parent1, Animal parent2) {
-		improveSpeed(this.getAdnPoints());
+		improveDetectionDistance(this.getAdnPoints());
 	}
 
 	private boolean idle() {

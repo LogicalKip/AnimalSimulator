@@ -4,10 +4,9 @@
 package model.management;
 
 import java.io.File;
+import java.util.HashSet;
 import java.util.Random;
-
-
-//TODO spend 10 one time (if it costs 10) will improve once. Spend 1 ten times will improve nothing. Should remember "wasted" points and pile up later.
+import java.util.Set;
 
 /**
  * Animals, either yours or enemies. Extend to create your animal.
@@ -22,8 +21,6 @@ public abstract class Animal implements Cloneable {
 	private Simulator simulator;
 
 	private boolean isDead;
-
-	private int detectionDistance;
 
 	private int posX;
 	private int posY;
@@ -45,33 +42,49 @@ public abstract class Animal implements Cloneable {
 	 */
 	private double dirY;
 
-	private int speed;
+	private Feature speed;
 
+	private Feature pubertyAge;
+
+	private Feature maxFullness;
+
+	private Feature attack;
+	
+	private Feature detectionDistance;
+	
 	private int fullness;
 
-	private int maxFullness;
-
 	private int adnPoints;
-
-	private int attack;
 
 	private int ticksLeftBeforeNextMating;
 
 	private int age;
 
-	private int maxAdnPoints;
-	
 	private int generation;
+	
+	/**
+	 * How old the animal was when it died, not about dying of old age
+	 */
+	private int ageOfDeath;
 
-	final private int pubertyAge;
+	private Set<Animal> animalsToEatThisTick;
+	
+	private Set<Grass> grassesToEatThisTick;
 
+	private Animal animalToAttackThisTick;
+	
+	private Animal animalToMateWithThisTick;
+
+
+
+	final static public int TIME_TO_ROT = 200;
 
 	final static public int MAX_DISTANCE_TO_ATTACK = 30;
 	final static public int MAX_DISTANCE_TO_MATE = 50;
 
 	final static public int DEFAULT_FULLNESS_PER_CARNIVOROUS_BITE = 500;
 	final static public int DEFAULT_SPEED = 2;
-	final static public int DEFAULT_DETECTION_DISTANCE = 100;
+	final static public int DEFAULT_DETECTION_DISTANCE = 130;
 	final static public int DEFAULT_MAX_FULLNESS = 300;
 	final static public int DEFAULT_TIME_BETWEEN_MATING = 150; // TODO being able to improve mating attributes
 	final static public int DEFAULT_PUBERTY_AGE = 20;
@@ -81,11 +94,12 @@ public abstract class Animal implements Cloneable {
 	final static public int ADN_GAIN_TO_NEWBORN = 2;
 	final static public int STARTING_ADN_POINTS = 20;
 	final static public int SPEED_IMPROVING_COST = 3;
-	final static public int DETECTION_DISTANCE_IMPROVING_COST = 2;
+	final static public int DETECTION_DISTANCE_IMPROVING_COST = 1;
 	final static public int MAX_FULLNESS_IMPROVING_COST = 1;
-	final static public int ATTACK_IMPROVING_COST = 2;
+	final static public int ATTACK_IMPROVING_COST = 5;
 	final static public int HERBIVORE_COST = 10;
 	final static public int CARNIVORE_COST = 7;
+	final static public int PUBERTY_IMPROVING_COST = 2;
 
 	/**
 	 * Constructor for animals already in the game when it starts.
@@ -104,62 +118,52 @@ public abstract class Animal implements Cloneable {
 		this.setDead(false);
 		this.setDirX(0);
 		this.setDirY(0);
-		this.attack = 0;
 		this.ticksLeftBeforeNextMating = 0;
 		this.alreadyAttackedThisTick = false;
-		this.maxFullness = DEFAULT_MAX_FULLNESS;
-		this.detectionDistance = DEFAULT_DETECTION_DISTANCE;
-		this.speed = DEFAULT_SPEED;
-		this.maxAdnPoints = STARTING_ADN_POINTS;
-		this.pubertyAge = DEFAULT_PUBERTY_AGE;
+		this.attack = new Feature(ATTACK_IMPROVING_COST, 0, this);
+		this.detectionDistance = new Feature(DETECTION_DISTANCE_IMPROVING_COST, DEFAULT_DETECTION_DISTANCE, this);
+		this.speed = new Feature(SPEED_IMPROVING_COST, DEFAULT_SPEED, this);
+		this.maxFullness = new Feature(MAX_FULLNESS_IMPROVING_COST, DEFAULT_MAX_FULLNESS, this);
+		this.pubertyAge = new Feature(PUBERTY_IMPROVING_COST, DEFAULT_PUBERTY_AGE, this);
 		this.setPosX(x);
 		this.setPosY(y);
-		this.age = this.pubertyAge;
+		this.age = this.pubertyAge.getValue();
 		this.adnPoints = STARTING_ADN_POINTS;
 		this.herbivore = false;
 		this.carnivore = false;
 		this.simulator = s;
-		this.fullness = (new Random().nextInt(this.maxFullness/2) + this.maxFullness/2);
+		this.fullness = (new Random().nextInt(this.maxFullness.getValue()/2) + this.maxFullness.getValue()/2);
 		this.generation = 1;
+		this.ageOfDeath = -1;
+		this.animalsToEatThisTick = new HashSet<Animal>();
+		this.grassesToEatThisTick = new HashSet<Grass>();
 
 		this.chooseInitialDiet();
 	}
 
 	synchronized public final void improveSpeed(final int adnToSpend) {
-		this.speed += adnImprovement(SPEED_IMPROVING_COST, adnToSpend);
+		this.speed.upgrade(adnToSpend);
 	}
 
 	synchronized public final void improveDetectionDistance(final int adnToSpend) {
-		this.detectionDistance += adnImprovement(DETECTION_DISTANCE_IMPROVING_COST, adnToSpend);
+		this.detectionDistance.upgrade(adnToSpend);
 	}
 
 	synchronized public final void improveMaxFullness(final int adnToSpend) {
-		this.maxFullness += adnImprovement(MAX_FULLNESS_IMPROVING_COST, adnToSpend);
+		this.maxFullness.upgrade(adnToSpend);
 	}
 
 	synchronized public final void improveAttack(final int adnToSpend) {
-		this.attack += adnImprovement(ATTACK_IMPROVING_COST, adnToSpend);
+		this.attack.upgrade(adnToSpend);
 	}
 
-	/**
-	 * Used as a factorization for all improvement methods
-	 * @param adnToSpend How much is wished to be spent on this improvement
-	 * @return How many points must be added to the attribute improved
-	 */
-	private int adnImprovement(final int costPerImprovement, final int adnToSpend) {
-		if (adnToSpend > 0 && adnToSpend <= this.adnPoints) {
-			final int nbTimesImproved = adnToSpend/costPerImprovement;
-			this.adnPoints -= nbTimesImproved * costPerImprovement;
-			return nbTimesImproved;
-		}
-		return 0;
-	}
-
-	synchronized public final void attack(Animal a) {
-		if (!this.alreadyAttackedThisTick && Simulator.euclidianDistance(a.getPosX(), a.getPosY(), this.getPosX(), this.getPosY()) <= MAX_DISTANCE_TO_ATTACK) {
+	synchronized final void attack(Animal a) {
+		if (!this.alreadyAttackedThisTick && Simulator.euclidianDistance(a.getPosX(), a.getPosY(), this.getPosX(), this.getPosY()) <= MAX_DISTANCE_TO_ATTACK &&
+				this.isAlive() && a.isAlive()) {
 			this.alreadyAttackedThisTick = true;
-			if (this.attack > 0) {
+			if (this.attack.getValue() > 0) {
 				try {
+					a.onAttacked(new DetectedAnimal(this), this.attack.getValue());
 					a.die();
 				} catch (IllegalStateException e) {
 					System.err.println(e.getMessage());
@@ -167,33 +171,38 @@ public abstract class Animal implements Cloneable {
 			}
 		}
 	}
+	
+	synchronized public final void attack(DetectedAnimal a) {
+		this.animalToAttackThisTick = a.getActualAnimal();
+	}
 
 
 	/**
-	 * /!\ The baby will be created using the the Object#clone() method. You may want to override it depending on your Animal implementation.
-	 * Tries to create an offspring, if all requirements, such as being old enough, and not being too soon after a previous mating, are fulfilled.
-	 * Some attributes will be copied from the parents.
-	 * @param mate the other parent
+	 * See {@link Animal#mate(DetectedAnimal)}
 	 */
-	synchronized public final void mate(Animal mate) {
+	synchronized final void mate(Animal mate) {
 		if (this.isAlive() && mate.isAlive()) {
-			if (this.age >= this.pubertyAge && mate.age >= mate.pubertyAge) {
+			if (this.age >= this.pubertyAge.getValue() && mate.age >= mate.pubertyAge.getValue()) {
 				if (this.ticksLeftBeforeNextMating == 0 && mate.ticksLeftBeforeNextMating == 0) {
 					if (Simulator.euclidianDistance(mate.posX, mate.posY, this.posX, this.posY) <= MAX_DISTANCE_TO_MATE) {
 						if (this.sameSpeciesAs(mate)) {
 							this.ticksLeftBeforeNextMating = DEFAULT_TIME_BETWEEN_MATING;
 							mate.ticksLeftBeforeNextMating = DEFAULT_TIME_BETWEEN_MATING;
 
-							try {//TODO all this should be in simulator ?
-								Animal baby = (Animal) ((this.maxAdnPoints > mate.maxAdnPoints) ? this.clone() : mate.clone()); // The most evolved parent is considered the basis
+							try {
+								Animal baby = (Animal) ((this.getGeneration() > mate.getGeneration()) ? this.clone() : mate.clone()); // The most evolved parent is considered the basis
 
-								baby.posX = (this.posX + mate.posX)/2;//TODO when delivering the baby after carrying, should be next to mom and nothing to do with the dad
+								baby.posX = (this.posX + mate.posX)/2;//TODO If pregnancy is ever done : when delivering the baby after carrying, should be next to mom and nothing to do with the dad
 								baby.posY = (this.posY + mate.posY)/2;
 								baby.age = 0;
-								baby.maxAdnPoints += ADN_GAIN_TO_NEWBORN;
-								baby.adnPoints += ADN_GAIN_TO_NEWBORN;
+								baby.adnPoints = this.getAdnPoints() + mate.getAdnPoints() + ADN_GAIN_TO_NEWBORN;
 								baby.fullness = Math.max(this.fullness, mate.fullness);
 								baby.generation++;
+								baby.speed = baby.speed.getClone(baby);
+								baby.pubertyAge = baby.pubertyAge.getClone(baby);
+								baby.maxFullness = baby.maxFullness.getClone(baby);
+								baby.attack = baby.attack.getClone(baby);
+								baby.detectionDistance = baby.detectionDistance.getClone(baby);
 								baby.onBirth(this, mate);
 
 								simulator.addBabyToWorld(baby);
@@ -207,24 +216,21 @@ public abstract class Animal implements Cloneable {
 		}
 	}
 	
-	public Animal getClone() {
-		try {
-			return (Animal) this.clone();
-		} catch (CloneNotSupportedException e) {
-			e.printStackTrace();
-		}
-		return null;
+	/**
+	 * /!\ The baby will be created using the the Object#clone() method.
+	 * Tries to create an offspring, if all requirements, such as being old enough, and not being too soon after a previous mating, are fulfilled.
+	 * Some attributes will be copied from the parents.
+	 * @param mate the other parent
+	 */
+	synchronized public final void mate(DetectedAnimal mate) {
+		animalToMateWithThisTick = mate.getActualAnimal();
 	}
 
 	/**
 	 * Called in the baby object once he's born.
 	 * Use it to spend the baby's (few) new added adn points and/or giving him some knowledge, possibly using the parents' attributes.
-	 * @param baby
-	 * @param parent1
-	 * @param parent2
 	 */
 	protected abstract void onBirth(Animal parent1, Animal parent2);
-
 
 
 	/**
@@ -270,6 +276,11 @@ public abstract class Animal implements Cloneable {
 			this.ticksLeftBeforeNextMating--;
 		}
 		this.age++;
+		this.animalsToEatThisTick.clear();
+		this.grassesToEatThisTick.clear();
+		if (this.isDead() && this.age - this.ageOfDeath >= TIME_TO_ROT) {
+			simulator.removeAnimalFromWorld(this);
+		}
 	}
 
 	/**
@@ -293,8 +304,8 @@ public abstract class Animal implements Cloneable {
 		this.posY = posY;
 	}
 
-	public final int getSpeed() {
-		return speed;
+	public final int getSpeedValue() {
+		return speed.getValue();
 	}
 
 	public final double getDirX() {
@@ -330,16 +341,16 @@ public abstract class Animal implements Cloneable {
 			if (this.fullness > 0) {
 				this.fullness--;
 			} else {
-				this.setDead(true);
+				this.die();
 			}
 		}
 	}
 
 	final void eatFrom(Grass f) {
-		if (this.isAlive() && this.isHerbivore() && this.fullness < this.maxFullness) {
+		if (this.isAlive() && this.isHerbivore() && this.fullness < this.maxFullness.getValue()) {
 			this.fullness += f.beingEaten();
-			if (this.fullness > this.maxFullness) {
-				this.fullness = this.maxFullness;
+			if (this.fullness > this.maxFullness.getValue()) {
+				this.fullness = this.maxFullness.getValue();
 			}	
 		}
 	}
@@ -347,8 +358,8 @@ public abstract class Animal implements Cloneable {
 	final void eatFrom(Animal a) {
 		if (this.isAlive() && a.isDead() && this.isCarnivore()) {
 			this.fullness += DEFAULT_FULLNESS_PER_CARNIVOROUS_BITE;
-			if (this.fullness > this.maxFullness) {
-				this.fullness = this.maxFullness;
+			if (this.fullness > this.maxFullness.getValue()) {
+				this.fullness = this.maxFullness.getValue();
 			}	
 		}
 	}
@@ -358,6 +369,7 @@ public abstract class Animal implements Cloneable {
 			throw new IllegalStateException("What is dead can't die :/");
 		} else {
 			this.isDead = true;
+			this.ageOfDeath = this.age;
 			this.onDeath();
 		}
 	}
@@ -368,8 +380,8 @@ public abstract class Animal implements Cloneable {
 	 */
 	final void move(final int MAX_X, final int MAX_Y) {
 		if (this.isAlive()) {
-			int newX = getPosX() + (int)Math.ceil(getSpeed() * getDirX());
-			int newY = getPosY() + (int)Math.ceil(getSpeed() * getDirY());
+			int newX = getPosX() + (int)Math.ceil(getSpeedValue() * getDirX());
+			int newY = getPosY() + (int)Math.ceil(getSpeedValue() * getDirY());
 
 			if (newX >= 0 && newX <= MAX_X) {
 				setPosX(newX);
@@ -378,6 +390,20 @@ public abstract class Animal implements Cloneable {
 				setPosY(newY);
 			}
 		}
+	}
+	
+	/**
+	 * Tries to eat the animal this tick. Must be called again if necessary  
+	 */
+	public final void eat(DetectedAnimal a) {
+		this.animalsToEatThisTick.add(a.getActualAnimal());
+	}
+	
+	/**
+	 * Tries to eat the grass this tick. Must be called again if necessary  
+	 */
+	public final void eat(DetectedGrass g) {
+		this.grassesToEatThisTick.add(g.getActualGrass());
 	}
 
 	public final boolean isDead() {
@@ -392,8 +418,8 @@ public abstract class Animal implements Cloneable {
 		this.isDead = isDead;
 	}
 
-	public final int getDetectionDistance() {
-		return detectionDistance;
+	public final int getDetectionDistanceValue() {
+		return detectionDistance.getValue();
 	}
 
 	/**
@@ -401,7 +427,7 @@ public abstract class Animal implements Cloneable {
 	 * Must be overridden to be used
 	 * @param g the grass detected, as it was when detected. This is not the real reference and won't be updated. Think 'snapshot'
 	 */
-	public void onGrassDetected(Grass g) {
+	public void onGrassDetected(DetectedGrass g) {
 	}
 
 	/**
@@ -409,13 +435,19 @@ public abstract class Animal implements Cloneable {
 	 * Must be overridden to be used
 	 * @param a the animal detected, as it was when detected. This is not the real reference and won't be updated. Think 'snapshot'
 	 */
-	public void onAnimalDetected(Animal a) {
+	public void onAnimalDetected(DetectedAnimal a) {
 	}
 
 	/**
 	 * Can be overridden to do one last thing when the animal dies
 	 */
 	public void onDeath() {
+	}
+	
+	/**
+	 * Called when attacked by another animal
+	 */
+	public void onAttacked(DetectedAnimal attacker, int damage) {
 	}
 
 	/**
@@ -474,8 +506,8 @@ public abstract class Animal implements Cloneable {
 		return tilePath;
 	}
 
-	public final int getMaxFullness() {
-		return maxFullness;
+	public final int getMaxFullnessValue() {
+		return maxFullness.getValue();
 	}
 
 	public final Simulator getSimulator() {
@@ -486,23 +518,71 @@ public abstract class Animal implements Cloneable {
 		return adnPoints;
 	}
 
-	public final int getAttack() {
-		return attack;
+	public final int getAttackValue() {
+		return attack.getValue();
 	}
 
-	public boolean isHerbivore() {
+	public final boolean isHerbivore() {
 		return herbivore;
 	}
 
-	public boolean isCarnivore() {
+	public final boolean isCarnivore() {
 		return carnivore;
 	}
 
-	public int getGeneration() {
+	public final int getGeneration() {
 		return generation;
 	}
 
-	public String getDeadTilePath() {
+	public final String getDeadTilePath() {
 		return deadTilePath;
+	}
+
+	 final void removeAdnPoints(int adnPointsToRemove) {
+		if (adnPoints >= adnPointsToRemove) {
+			this.adnPoints -= adnPointsToRemove;
+		} else {
+			throw new IllegalStateException();
+		}
+	}
+
+	public final Feature getSpeed() {
+		return speed;
+	}
+
+	public final Feature getPubertyAge() {
+		return pubertyAge;
+	}
+
+	public final Feature getAttack() {
+		return attack;
+	}
+
+	public final Feature getMaxFullness() {
+		return maxFullness;
+	}
+
+	public final Feature getDetectionDistance() {
+		return detectionDistance;
+	}
+
+	public final Set<Animal> getAnimalsToEatThisTick() {
+		return animalsToEatThisTick;
+	}
+
+	public final Set<Grass> getGrassesToEatThisTick() {
+		return grassesToEatThisTick;
+	}
+
+	public final Animal getAnimalToAttackThisTick() {
+		return animalToAttackThisTick;
+	}
+
+	public Animal getAnimalToMateWithThisTick() {
+		return animalToMateWithThisTick;
+	}
+
+	int getAgeOfDeath() {
+		return ageOfDeath;
 	}
 }

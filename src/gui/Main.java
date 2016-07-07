@@ -20,12 +20,36 @@ import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
 import javafx.stage.Popup;
 import javafx.stage.Stage;
-import model.Boui;
+import model.GuineaPig;
 import model.Predator;
 import model.management.Animal;
 import model.management.Grass;
 import model.management.Simulator;
 
+/** TODO GUI-based ideas :
+ * can speed up/slow down/pause the game
+ * 
+ * restart with several .class, with or without CPU predators
+ * 
+ * bigger maps (according to resolution ?)
+ * 
+ * better graphics/error message boxes
+ * 
+ * configurable numbers of starting entities
+ * 
+ * animated gifs with random starting frame
+ * 
+ * allow packaged classes to be loaded
+ * 
+ * reduce tile size if too big
+ * 
+ * restart button with the same animals/settings, different random
+ */
+
+
+/**
+ * The main GUI class
+ */
 public class Main extends Application {
 
 	private Simulator simulator;
@@ -47,7 +71,7 @@ public class Main extends Application {
 
 	@Override
 	public void start(Stage s) {
-		this.simulator = new Simulator(Boui.class); 
+		this.simulator = new Simulator(GuineaPig.class); 
 		this.stage = s;
 
 		setup();
@@ -121,7 +145,7 @@ public class Main extends Application {
 				} catch (IllegalArgumentException e) {
 					e.printStackTrace();
 				} catch (NoSuchMethodException e) {
-					errorMsg("Class should have a constructor with the same signature as Animal, and it should call super() with those parameters");
+					errorMsg("Class should have a public constructor with the same signature as Animal, and it should call super() with those parameters");
 				} catch (InstantiationException e) {
 					e.printStackTrace();
 				} catch (IllegalAccessException e) {
@@ -160,7 +184,7 @@ public class Main extends Application {
 			for (Animal a : simulator.getAllAnimals()) {
 				canvasGraphics.setFill(a instanceof Predator ? Color.DARKORCHID : Color.CYAN);
 				if (a.isAlive()) {
-					final int radius = a.getDetectionDistance();
+					final int radius = a.getDetectionDistanceValue();
 					canvasGraphics.fillOval(a.getPosX() - radius, 
 							a.getPosY() - radius, 
 							radius*2, radius*2);
@@ -174,7 +198,7 @@ public class Main extends Application {
 			canvasGraphics.setFill(Color.GREEN);
 			int grassRadius = g.getAmount()/10;
 			canvasGraphics.fillOval(g.getPosX() - grassRadius, g.getPosY() - grassRadius, grassRadius*2, grassRadius*2);
-			canvasGraphics.fillText(Integer.toString(g.getAmount()),g.getPosX(), g.getPosY() - grassRadius);
+			canvasGraphics.fillText(Integer.toString(g.getAmount()), g.getPosX(), g.getPosY() - grassRadius);
 		}
 
 		//DRAW ANIMALS
