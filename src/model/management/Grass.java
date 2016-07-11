@@ -3,8 +3,7 @@ package model.management;
 import java.util.Random;
 
 public class Grass implements Cloneable {
-	private final int posX;
-	private final int posY;
+	private final Coordinate pos;
 	
 	private int amount;
 	private int age;
@@ -15,8 +14,7 @@ public class Grass implements Cloneable {
 	
 	
 	public Grass(int x, int y) {
-		this.posX = x;
-		this.posY = y;
+		this.pos = new Coordinate(x, y);
 		this.age = 0;
 		this.amount = MIN_INITIAL_AMOUNT + new Random().nextInt(MIN_INITIAL_AMOUNT/2);
 	}
@@ -31,11 +29,11 @@ public class Grass implements Cloneable {
 	}
 
 	public int getPosX() {
-		return posX;
+		return pos.getX();
 	}
 
 	public int getPosY() {
-		return posY;
+		return pos.getY();
 	}
 
 	public int getAmount() {
@@ -62,5 +60,21 @@ public class Grass implements Cloneable {
 		if (this.age % GROWTH_TIME == 0) {
 			this.amount++;
 		}
+	}
+	
+	public int getMaxDistanceToEat() {
+		int res = getWidth();
+		if (res < Simulator.MAX_DISTANCE_TO_EAT_PREY) {
+			res = Simulator.MAX_DISTANCE_TO_EAT_PREY;
+		}
+		return res;
+	}
+	
+	public int getWidth() {
+		return amount/10;
+	}
+
+	Coordinate getPos() {
+		return pos;
 	}
 }

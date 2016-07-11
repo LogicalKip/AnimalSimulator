@@ -5,6 +5,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 
 import javafx.animation.AnimationTimer;
+import javafx.animation.RotateTransition;
 import javafx.application.Application;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -16,14 +17,18 @@ import javafx.scene.control.Button;
 import javafx.scene.image.Image;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
 import javafx.stage.Popup;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 import model.GuineaPig;
 import model.Predator;
 import model.management.Animal;
+import model.management.Coordinate;
 import model.management.Grass;
+import model.management.River;
 import model.management.Simulator;
 
 /** TODO GUI-based ideas :
@@ -33,7 +38,7 @@ import model.management.Simulator;
  * 
  * bigger maps (according to resolution ?)
  * 
- * better graphics/error message boxes
+ * better graphics(rivers)/error message boxes
  * 
  * configurable numbers of starting entities
  * 
@@ -62,9 +67,12 @@ public class Main extends Application {
 
 	private Stage stage;
 
+	Rectangle rect = new Rectangle(100, 100, 500, 200);
+
 	public static final int MS_DELAY = 30;
 	public static final int ANIMAL_SIZE = 10;
-
+	public static final int LETTER_WIDTH = 3;
+	
 	public static void main(String[] args) {
 		launch(args);
 	}
@@ -75,6 +83,14 @@ public class Main extends Application {
 		this.stage = s;
 
 		setup();
+
+		int x = 180;
+		rect.setArcWidth(x);
+		rect.setArcHeight(x);
+		rect.setFill(Color.DARKKHAKI);
+		RotateTransition trans = new RotateTransition(Duration.millis(3000), rect);
+		trans.setToAngle(45);
+		trans.play();
 
 		stage.show();
 	}
@@ -97,6 +113,7 @@ public class Main extends Application {
 
 	private void initComponents() {
 		Group root = new Group();
+
 		Scene theScene = new Scene(root);
 		stage.setScene(theScene);
 
@@ -179,8 +196,8 @@ public class Main extends Application {
 		canvasGraphics.clearRect(0, 0, simulator.MAP_WIDTH, simulator.MAP_HEIGHT);
 
 		//DRAW DETECTION DISTANCE
-		canvasGraphics.setGlobalAlpha(0.3);
 		if (drawDetectionDistance) {
+			canvasGraphics.setGlobalAlpha(0.3);
 			for (Animal a : simulator.getAllAnimals()) {
 				canvasGraphics.setFill(a instanceof Predator ? Color.DARKORCHID : Color.CYAN);
 				if (a.isAlive()) {
@@ -190,15 +207,27 @@ public class Main extends Application {
 							radius*2, radius*2);
 				}
 			}
+			canvasGraphics.setGlobalAlpha(1);
 		}
-		canvasGraphics.setGlobalAlpha(1);
 
 		//DRAW GRASS
+		canvasGraphics.setFill(Color.GREEN);
 		for (Grass g : simulator.getAllFoodSources()) {
-			canvasGraphics.setFill(Color.GREEN);
-			int grassRadius = g.getAmount()/10;
+			int grassRadius = g.getWidth();
 			canvasGraphics.fillOval(g.getPosX() - grassRadius, g.getPosY() - grassRadius, grassRadius*2, grassRadius*2);
-			canvasGraphics.fillText(Integer.toString(g.getAmount()), g.getPosX(), g.getPosY() - grassRadius);
+			String info = Integer.toString(g.getAmount());
+			canvasGraphics.fillText(info, g.getPosX() - (LETTER_WIDTH * info.length()), g.getPosY() - grassRadius);
+		}
+		
+		//DRAW RIVERS
+		for (River r : simulator.getAllRivers()) {
+			Coordinate nodes[] = r.getNodes();
+			for (int i = 0 ; i < nodes.length-1 ; i++) {
+				Coordinate node1 = nodes[i];
+				Coordinate node2 = nodes[i+1];
+				canvasGraphics.setStroke(Color.BLUE);
+				canvasGraphics.strokeLine(node1.getX(), node1.getY(), node2.getX(), node2.getY());
+			}
 		}
 
 		//DRAW ANIMALS
@@ -218,7 +247,17 @@ public class Main extends Application {
 						a.getPosX()-img.getWidth()/2, 
 						a.getPosY()-img.getHeight()/2);
 			}
-			canvasGraphics.fillText("[" + a.getGeneration() + "] " + Integer.toString(a.getFullness()), a.getPosX(), a.getPosY() - animalRepresentationSize/2);
+			String info = "[" + a.getGeneration() + "] " + Integer.toString(a.getFullness());
+			canvasGraphics.fillText(info, a.getPosX() - (LETTER_WIDTH * info.length()), a.getPosY() - animalRepresentationSize/2);
 		}
+		
+	}
+
+	public boolean isDrawDetectionDistance() {
+		return drawDetectionDistance;
+	}
+
+	public void setDrawDetectionDistance(boolean drawDetectionDistance) {
+		this.drawDetectionDistance = drawDetectionDistance;
 	}
 }

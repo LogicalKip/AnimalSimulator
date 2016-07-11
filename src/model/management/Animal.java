@@ -3,8 +3,10 @@
  */
 package model.management;
 
+import java.awt.geom.Line2D;
 import java.io.File;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
@@ -22,8 +24,7 @@ public abstract class Animal implements Cloneable {
 
 	private boolean isDead;
 
-	private int posX;
-	private int posY;
+	private Coordinate pos;
 
 	private boolean alreadyAttackedThisTick;
 
@@ -125,8 +126,7 @@ public abstract class Animal implements Cloneable {
 		this.speed = new Feature(SPEED_IMPROVING_COST, DEFAULT_SPEED, this);
 		this.maxFullness = new Feature(MAX_FULLNESS_IMPROVING_COST, DEFAULT_MAX_FULLNESS, this);
 		this.pubertyAge = new Feature(PUBERTY_IMPROVING_COST, DEFAULT_PUBERTY_AGE, this);
-		this.setPosX(x);
-		this.setPosY(y);
+		this.pos = new Coordinate(x, y);
 		this.age = this.pubertyAge.getValue();
 		this.adnPoints = STARTING_ADN_POINTS;
 		this.herbivore = false;
@@ -184,7 +184,7 @@ public abstract class Animal implements Cloneable {
 		if (this.isAlive() && mate.isAlive()) {
 			if (this.age >= this.pubertyAge.getValue() && mate.age >= mate.pubertyAge.getValue()) {
 				if (this.ticksLeftBeforeNextMating == 0 && mate.ticksLeftBeforeNextMating == 0) {
-					if (Simulator.euclidianDistance(mate.posX, mate.posY, this.posX, this.posY) <= MAX_DISTANCE_TO_MATE) {
+					if (Simulator.euclidianDistance(mate.pos.getX(), mate.pos.getY(), this.pos.getX(), this.pos.getY()) <= MAX_DISTANCE_TO_MATE) {
 						if (this.sameSpeciesAs(mate)) {
 							this.ticksLeftBeforeNextMating = DEFAULT_TIME_BETWEEN_MATING;
 							mate.ticksLeftBeforeNextMating = DEFAULT_TIME_BETWEEN_MATING;
@@ -192,8 +192,9 @@ public abstract class Animal implements Cloneable {
 							try {
 								Animal baby = (Animal) ((this.getGeneration() > mate.getGeneration()) ? this.clone() : mate.clone()); // The most evolved parent is considered the basis
 
-								baby.posX = (this.posX + mate.posX)/2;//TODO If pregnancy is ever done : when delivering the baby after carrying, should be next to mom and nothing to do with the dad
-								baby.posY = (this.posY + mate.posY)/2;
+								baby.pos = new Coordinate(
+										this.pos.getX() + mate.pos.getX()/2, 
+										this.pos.getY() + mate.pos.getY()/2);//TODO If pregnancy is ever done : when delivering the baby after carrying, should be next to mom and nothing to do with the dad
 								baby.age = 0;
 								baby.adnPoints = this.getAdnPoints() + mate.getAdnPoints() + ADN_GAIN_TO_NEWBORN;
 								baby.fullness = Math.max(this.fullness, mate.fullness);
@@ -289,19 +290,19 @@ public abstract class Animal implements Cloneable {
 	public abstract void behave();
 
 	public final int getPosX() {
-		return posX;
+		return pos.getX();
 	}
 
 	synchronized private final void setPosX(int posX) {
-		this.posX = posX;
+		this.pos.setX(posX);
 	}
 
 	public final int getPosY() {
-		return posY;
+		return pos.getY();
 	}
 
 	private final void setPosY(int posY) {
-		this.posY = posY;
+		this.pos.setY(posY);
 	}
 
 	public final int getSpeedValue() {
@@ -373,20 +374,37 @@ public abstract class Animal implements Cloneable {
 			this.onDeath();
 		}
 	}
-
+	
 	/**
 	 * Moves the animal, if alive, according to previously set directions and speed.
 	 * Will not go under 0 or above given integers
 	 */
-	final void move(final int MAX_X, final int MAX_Y) {
+	final void move(final int MAX_X, final int MAX_Y, List<River> rivers) {
 		if (this.isAlive()) {
 			int newX = getPosX() + (int)Math.ceil(getSpeedValue() * getDirX());
 			int newY = getPosY() + (int)Math.ceil(getSpeedValue() * getDirY());
 
-			if (newX >= 0 && newX <= MAX_X) {
+			boolean willCrossRiver = false;
+			Line2D animalLine = new Line2D.Float(getPosX(), getPosY(), newX, newY);
+			for (River r : rivers) {
+				if (willCrossRiver) {
+					break;
+				}
+				Coordinate nodes[] = r.getNodes();
+				for (int i = 0 ; i < nodes.length-1 ; i++) {
+					Coordinate node1 = nodes[i];
+					Coordinate node2 = nodes[i+1];
+					Line2D currentRiverLine = new Line2D.Float(node1.getX(), node1.getY(), node2.getX(), node2.getY());
+					if (animalLine.intersectsLine(currentRiverLine)) {
+						willCrossRiver = true;
+						break;
+					}
+				}
+			}
+			if (!willCrossRiver && newX >= 0 && newX <= MAX_X) {
 				setPosX(newX);
 			}
-			if (newY >= 0 && newY <= MAX_Y) {
+			if (!willCrossRiver && newY >= 0 && newY <= MAX_Y) {
 				setPosY(newY);
 			}
 		}
@@ -436,6 +454,15 @@ public abstract class Animal implements Cloneable {
 	 * @param a the animal detected, as it was when detected. This is not the real reference and won't be updated. Think 'snapshot'
 	 */
 	public void onAnimalDetected(DetectedAnimal a) {
+	}
+	
+	/**
+	 * Called every tick, for every part of rivers near the animal (near means less than {@link Animal#detectionDistance})
+	 * The whole river won't be given, but the two extremities of that part of the river are given even if they can't be detected. 
+	 * It's possible to map the whole river with a bit of exploring and memory (2 equal coordinates means the same river).
+	 * Must be overridden to be used
+	 */
+	public void onRiverDetected(Coordinate a, Coordinate b) {
 	}
 
 	/**

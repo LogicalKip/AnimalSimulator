@@ -4,6 +4,7 @@ package model;
 import java.util.Random;
 
 import model.management.Animal;
+import model.management.Coordinate;
 import model.management.DetectedAnimal;
 import model.management.DetectedGrass;
 import model.management.Simulator;
@@ -14,7 +15,7 @@ public class GuineaPig extends Animal {
 	private final int TIME_BEFORE_LOOKING_ELSEWHERE = 60;
 
 	private boolean fleeing;
-
+	
 	public GuineaPig(int x, int y, Simulator s) throws IllegalArgumentException {
 		super(x, y, s);
 		changeImage("guinea_pig_icon.gif");
@@ -49,14 +50,17 @@ public class GuineaPig extends Animal {
 				% TIME_BEFORE_LOOKING_ELSEWHERE 
 				== 0;
 	}
+	
+	@Override
+	public void onRiverDetected(Coordinate a, Coordinate b) {
+		//TODO
+	}
 
 	private void processGrass(DetectedGrass g) {
 		if (closeEnoughToEat(nearestGrass)) {
+			sit();
 			if (isHungry()) {
-				sit();
 				eat(g);
-			} else {
-				moveAwayFrom(nearestGrass.getPosX(), nearestGrass.getPosY());
 			}
 		} else {
 			if (isHungry()) {
@@ -75,7 +79,7 @@ public class GuineaPig extends Animal {
 	}
 
 	private boolean closeEnoughToEat(DetectedGrass g) {
-		return Simulator.euclidianDistance(getPosX(), getPosY(), g.getPosX(), g.getPosY()) <= getSimulator().MAX_DISTANCE_TO_EAT;
+		return Simulator.euclidianDistance(getPosX(), getPosY(), g.getPosX(), g.getPosY()) <= g.getMaxDistanceToEat();
 	}
 
 	private boolean isHungry() {

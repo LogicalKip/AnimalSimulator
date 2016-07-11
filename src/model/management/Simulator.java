@@ -3,23 +3,21 @@
  */
 package model.management;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Random;
 import java.util.Set;
 
-import model.Predator;
+import com.sun.javafx.geom.Line2D;
+import com.sun.javafx.geom.Point2D;
 
 /** TODO gameplay ideas :
- * rivers : random patterns, not crossable unless payed for the feature, all animals need water to survive (amount can be changed : think of camels). Gives bonus points if can only live in the water ? beware bug of grass growing into/beyond water
- * 
- * being able to eat the further away from the grass the bigger it is
+ * rivers : not crossable unless payed for the feature, all animals need water to survive (amount can be changed : think of camels). Gives bonus points if can only live in the water ? beware grass growing into/beyond water (is it a problem ?).
  * 
  * rots after dead for too long. Can be eaten only by animals with the corresponding diet (scavenger, which implies carnivorous as well ?). Disappears completely some time after
+ * 
+ * spawn of grass after some time ?
  */
 
 
@@ -28,87 +26,65 @@ import model.Predator;
  * Main class, controls interactions between most other classes.
  */
 public class Simulator {
-	List<Animal> allAnimals;
-	List<Grass> allGrass;
-	List<Animal> newborns;
-	Set<Animal> animalsToRemove;
-	
-	public final int MAP_WIDTH = 1600;
-	public final int MAP_HEIGHT = 900;
-	
-	
-	public final int MAX_DISTANCE_TO_EAT = 30;
+	private List<Animal> allAnimals;
+	private List<Grass> allGrass;
+	private List<River> allRivers;
+	private List<Animal> newborns;
+	private Set<Animal> animalsToRemove;
 
-	public final int STARTING_VEGETATION = (MAP_WIDTH+MAP_HEIGHT)/100;
-	public final int STARTING_ANIMALS = STARTING_VEGETATION;
-	public final int STARTING_PREDATORS = STARTING_ANIMALS/2;
-	
-	
+	public final static int MAX_DISTANCE_TO_EAT_PREY = 30;
+
+	public final int MAP_WIDTH;
+	public final int MAP_HEIGHT;
+
 	private int ticksElapsed;
-	
+
 	public Simulator(Class<?> race) throws IllegalArgumentException {
 		ticksElapsed = 0;
 		allAnimals = new LinkedList<Animal>();
 		newborns = new LinkedList<Animal>();
+		allRivers = new LinkedList<River>();
 		animalsToRemove = new HashSet<Animal>();
 		allGrass = new LinkedList<Grass>();
-		
-		Random r = new Random();
-		for (int i = 0 ; i < STARTING_ANIMALS ; i++) {
-			int x = r.nextInt(MAP_WIDTH);
-			int y = r.nextInt(MAP_HEIGHT);
 
-			try {
-				Constructor<?> constructor = race.getConstructor(int.class, int.class, Simulator.class);
-				Animal animalInstance = (Animal) constructor.newInstance(x, y, this);
-				allAnimals.add(animalInstance);
-			} catch (NoSuchMethodException | SecurityException | InstantiationException | IllegalAccessException | InvocationTargetException e) {
-				e.printStackTrace();
-			}
-		}
-		for (int i = 0 ; i < STARTING_PREDATORS ; i++) {
-			int x = r.nextInt(MAP_WIDTH);
-			int y = r.nextInt(MAP_HEIGHT);
-			allAnimals.add(new Predator(x, y, this));
-		}
-		for (int i = 0 ; i < STARTING_VEGETATION ; i++) {
-			int x = r.nextInt(MAP_WIDTH);
-			int y = r.nextInt(MAP_HEIGHT);
-			allGrass.add(new Grass(x, y));
-		}
+		MapGenerator map = new MapGenerator();
+		MAP_HEIGHT = map.MAP_HEIGHT;
+		MAP_WIDTH = map.MAP_WIDTH;
+
+		map.generateWorld(allAnimals, allGrass, allRivers, race, this);
 	}
 
 	public List<Animal> getAllAnimals() {
 		return allAnimals;
 	}
-	
+
 	public void nextTick() {
 		callDetectionMethods();
-		
+
 		for (Animal a : allAnimals) {
 			a.behave();
 		}
 		for (Animal a : allAnimals) {
-			a.move(MAP_WIDTH, MAP_HEIGHT);
+			a.move(MAP_WIDTH, MAP_HEIGHT, allRivers);
 			a.gettingHungry();
 		}
-		
+
 		makeAnimalsAttack();
-		
+
 		makeAnimalsEat();
-		
+
 		makeAnimalsMate();
-		
+
 		for (Animal a : allAnimals) {
 			a.nextTick();
 		}
 		for (Grass g : allGrass) {
 			g.nextTick();
 		}
-		
+
 		allAnimals.addAll(newborns);
 		newborns.clear();
-		
+
 		for (Animal a : animalsToRemove) {
 			if (allAnimals.contains(a)) {
 				allAnimals.remove(a);
@@ -117,24 +93,36 @@ public class Simulator {
 			}
 		}
 		animalsToRemove.clear();
-		
+
 		ticksElapsed++;
 	}
-	
+
 	void addBabyToWorld(Animal baby) {
 		newborns.add(baby);
 	}
-	
+
 	void removeAnimalFromWorld(Animal animal) {
 		animalsToRemove.add(animal);
 	}
-	
+
 	private void callDetectionMethods() {
 		for (Animal a : allAnimals) {
 			for (Grass g : allGrass) {
 				double distanceToFood = euclidianDistance(a.getPosX(), a.getPosY(), g.getPosX(), g.getPosY());
 				if (Math.ceil(distanceToFood) < a.getDetectionDistanceValue()) {
 					a.onGrassDetected(new DetectedGrass(g));
+				}
+			}
+		}
+		for (Animal a : allAnimals) {
+			for (River r : allRivers) {
+				Coordinate nodes[] = r.getNodes();
+				for (int i = 0 ; i < nodes.length-1 ; i++) {
+					Coordinate node1 = nodes[i];
+					Coordinate node2 = nodes[i+1];
+					if (dist(node1.getX(), node1.getY(), node2.getX(), node2.getY(), a.getPosX(), a.getPosY()) <= a.getDetectionDistanceValue()) {
+						a.onRiverDetected(node1, node2);
+					}
 				}
 			}
 		}
@@ -147,7 +135,7 @@ public class Simulator {
 			}
 		}
 	}
-	
+
 	private void makeAnimalsAttack() {
 		for (Animal a1 : allAnimals) {
 			for (Animal a2 : allAnimals) {
@@ -157,8 +145,8 @@ public class Simulator {
 			}
 		}
 	}
-	
-	
+
+
 	private void makeAnimalsMate() {
 		for (Animal a1 : allAnimals) {
 			for (Animal a2 : allAnimals) {
@@ -168,20 +156,20 @@ public class Simulator {
 			}
 		}
 	}
-	
+
 	private void makeAnimalsEat() {
 		List<Animal> animalsToRemove = new LinkedList<Animal>();
 		List<Grass> grassToRemove = new LinkedList<Grass>();
 		for (Animal a : allAnimals) {
 			if (a.isAlive()) {
 				if (a.isHerbivore()) {
-					for (Grass f : allGrass) {
-						if (a.getGrassesToEatThisTick().contains(f)) {
-							double distanceToGrass = euclidianDistance(a.getPosX(), a.getPosY(), f.getPosX(), f.getPosY());
-							if (distanceToGrass <= MAX_DISTANCE_TO_EAT) {
-								a.eatFrom(f);
-								if (f.getAmount() == 0) {
-									grassToRemove.add(f);
+					for (Grass g : allGrass) {
+						if (a.getGrassesToEatThisTick().contains(g)) {
+							double distanceToGrass = euclidianDistance(a.getPosX(), a.getPosY(), g.getPosX(), g.getPosY());
+							if (distanceToGrass <= g.getMaxDistanceToEat()) {
+								a.eatFrom(g);
+								if (g.getAmount() == 0) {
+									grassToRemove.add(g);
 								}
 							}
 						}
@@ -191,7 +179,7 @@ public class Simulator {
 					for (Animal a2 : allAnimals) {
 						if (! a2.equals(a) && a.getAnimalsToEatThisTick().contains(a2)) {
 							double distanceToPrey = euclidianDistance(a.getPosX(), a.getPosY(), a2.getPosX(), a2.getPosY());
-							if (distanceToPrey <= MAX_DISTANCE_TO_EAT && a2.isDead()) {
+							if (distanceToPrey <= MAX_DISTANCE_TO_EAT_PREY && a2.isDead()) {
 								a.eatFrom(a2);
 								animalsToRemove.add(a2);
 							}
@@ -200,17 +188,40 @@ public class Simulator {
 				}
 			}
 		}
-		
+
 		allAnimals.removeAll(animalsToRemove);
 		allGrass.removeAll(grassToRemove);
 	}
-	
+
 	public static final double euclidianDistance(int x1, int y1, int x2, int y2) {
 		return Math.sqrt(
 				Math.pow(x1 - x2, 2)
-					+
+				+
 				Math.pow(y1 - y2, 2)
 				);
+	}
+	
+	/**
+	 * Returns the distance between a segment line 1-2 and a point 3
+	 */
+	public static double dist(double x1, double y1, double x2, double y2, double x3, double y3) {
+		double px = x2-x1;
+		double py = y2-y1;
+		
+		double something = px*px + py*py;
+	    double u =  ((x3 - x1) * px + (y3 - y1) * py) / something;
+	    
+	    if (u > 1)
+	        u = 1;
+	    else if (u < 0)
+	        u = 0;
+
+	    double x = x1 + u * px;
+	    double y = y1 + u * py;
+	    double dx = x - x3;
+	    double dy = y - y3;
+	    
+	    return Math.sqrt(dx*dx + dy*dy);
 	}
 
 	public int getTicksElapsed() {
@@ -219,5 +230,9 @@ public class Simulator {
 
 	public List<Grass> getAllFoodSources() {
 		return allGrass;
+	}
+
+	public List<River> getAllRivers() {
+		return allRivers;
 	}
 }

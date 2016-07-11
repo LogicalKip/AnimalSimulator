@@ -39,6 +39,10 @@ public class DetectedGrass {
 		return amount;
 	}
 	
+	public int getMaxDistanceToEat() {
+		return actualGrass.getMaxDistanceToEat();
+	}
+	
 	Grass getActualGrass() {
 		return actualGrass;
 	}
