@@ -9,9 +9,6 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
-import com.sun.javafx.geom.Line2D;
-import com.sun.javafx.geom.Point2D;
-
 /** TODO gameplay ideas :
  * rivers : not crossable unless payed for the feature, all animals need water to survive (amount can be changed : think of camels). Gives bonus points if can only live in the water ? beware grass growing into/beyond water (is it a problem ?).
  * 
@@ -39,7 +36,7 @@ public class Simulator {
 
 	private int ticksElapsed;
 
-	public Simulator(Class<?> race) throws IllegalArgumentException {
+	public Simulator(Class<?> race, boolean predators) throws IllegalArgumentException {
 		ticksElapsed = 0;
 		allAnimals = new LinkedList<Animal>();
 		newborns = new LinkedList<Animal>();
@@ -51,7 +48,7 @@ public class Simulator {
 		MAP_HEIGHT = map.MAP_HEIGHT;
 		MAP_WIDTH = map.MAP_WIDTH;
 
-		map.generateWorld(allAnimals, allGrass, allRivers, race, this);
+		map.generateWorld(allAnimals, allGrass, allRivers, race, predators, this);
 	}
 
 	public List<Animal> getAllAnimals() {

@@ -86,7 +86,7 @@ public abstract class Animal implements Cloneable {
 	final static public int DEFAULT_FULLNESS_PER_CARNIVOROUS_BITE = 500;
 	final static public int DEFAULT_SPEED = 2;
 	final static public int DEFAULT_DETECTION_DISTANCE = 130;
-	final static public int DEFAULT_MAX_FULLNESS = 300;
+	final static public int DEFAULT_MAX_FULLNESS = 500;
 	final static public int DEFAULT_TIME_BETWEEN_MATING = 150; // TODO being able to improve mating attributes
 	final static public int DEFAULT_PUBERTY_AGE = 20;
 
@@ -377,7 +377,7 @@ public abstract class Animal implements Cloneable {
 	
 	/**
 	 * Moves the animal, if alive, according to previously set directions and speed.
-	 * Will not go under 0 or above given integers
+	 * Will not go under 0, above given integers or through rivers
 	 */
 	final void move(final int MAX_X, final int MAX_Y, List<River> rivers) {
 		if (this.isAlive()) {

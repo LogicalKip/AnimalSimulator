@@ -9,7 +9,7 @@ import model.management.Simulator;
 /**
  * Animal that is dangerous to user-created animals
  */
-public class Predator extends Animal {
+public final class Predator extends Animal {
 
 	private final int TIME_BEFORE_LOOKING_ELSEWHERE = 40;
 

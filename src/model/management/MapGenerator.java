@@ -1,5 +1,6 @@
 package model.management;
 
+import java.awt.GraphicsEnvironment;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
@@ -8,8 +9,8 @@ import java.util.Random;
 import model.Predator;
 
 public class MapGenerator {
-	public final int MAP_WIDTH = 1600;
-	public final int MAP_HEIGHT = 900;
+	public final int MAP_WIDTH = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDisplayMode().getWidth() - 20;
+	public final int MAP_HEIGHT = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDisplayMode().getHeight() - 150;
 
 	public final int MAX_NB_RIVERS = (MAP_WIDTH+MAP_HEIGHT)/600;
 	public final int MIN_NB_NODE_IN_RIVERS = 3;
@@ -32,7 +33,7 @@ public class MapGenerator {
 	public MapGenerator() {
 	}
 
-	public void generateWorld(List<Animal> allAnimals, List<Grass> allGrass, List<River> allRivers, Class<?> race, Simulator simulator) {
+	public void generateWorld(List<Animal> allAnimals, List<Grass> allGrass, List<River> allRivers, Class<?> race, boolean predators, Simulator simulator) {
 		Random r = new Random();
 		for (int i = 0 ; i < STARTING_ANIMALS ; i++) {
 			int x = r.nextInt(MAP_WIDTH);
@@ -46,11 +47,14 @@ public class MapGenerator {
 				e.printStackTrace();
 			}
 		}
-		for (int i = 0 ; i < STARTING_PREDATORS ; i++) {
-			int x = r.nextInt(MAP_WIDTH);
-			int y = r.nextInt(MAP_HEIGHT);
-			allAnimals.add(new Predator(x, y, simulator));
+		if (predators) {
+			for (int i = 0 ; i < STARTING_PREDATORS ; i++) {
+				int x = r.nextInt(MAP_WIDTH);
+				int y = r.nextInt(MAP_HEIGHT);
+				allAnimals.add(new Predator(x, y, simulator));
+			}
 		}
+		
 		for (int i = 0 ; i < STARTING_VEGETATION ; i++) {
 			int x = r.nextInt(MAP_WIDTH);
 			int y = r.nextInt(MAP_HEIGHT);
@@ -58,7 +62,7 @@ public class MapGenerator {
 		}
 
 		for (int currRiver = 0 ; currRiver <= r.nextInt(MAX_NB_RIVERS) ; currRiver++) {
-			Coordinate riverNodes[];//TODO random rivers : number of rivers, number of nodes, directions
+			Coordinate riverNodes[];
 			riverNodes = new Coordinate[MIN_NB_NODE_IN_RIVERS + r.nextInt(MAX_ADDITIONNAL_NB_NODE_IN_RIVERS + 1)];
 			
 

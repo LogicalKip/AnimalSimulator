@@ -13,14 +13,17 @@ import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.image.Image;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
-import javafx.stage.Popup;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import model.GuineaPig;
@@ -36,15 +39,13 @@ import model.management.Simulator;
  * 
  * restart with several .class, with or without CPU predators
  * 
- * bigger maps (according to resolution ?)
- * 
- * better graphics(rivers)/error message boxes
+ * better graphics(rivers)
  * 
  * configurable numbers of starting entities
  * 
  * animated gifs with random starting frame
  * 
- * allow packaged classes to be loaded
+ * allow packaged classes to be loaded (forbidden because the class name and filename would not match (class is package.MyClass and filename is MyClass.class). Also to avoid cheaters using the package model.management to access protected methods like Animal#move)
  * 
  * reduce tile size if too big
  * 
@@ -79,7 +80,7 @@ public class Main extends Application {
 
 	@Override
 	public void start(Stage s) {
-		this.simulator = new Simulator(GuineaPig.class); 
+		this.simulator = new Simulator(GuineaPig.class, true); 
 		this.stage = s;
 
 		setup();
@@ -137,10 +138,44 @@ public class Main extends Application {
 		canvasGraphics = canvas.getGraphicsContext2D();
 	}
 
-	private void onRestartButtonClick(Stage s) {
+	private void onRestartButtonClick(Stage mainSimulatorStage) {
+		Stage configStage = new Stage();
+		configStage.setTitle("Start new Simulation");
+		int width = 500, height = width;
+		configStage.setWidth(width);
+		configStage.setHeight(height);
+		
+		
+
+		VBox root = new VBox();
+		Scene theScene = new Scene(root);
+		
+		configStage.setScene(theScene);
+		
+		HBox hbox = new HBox(20);
+		
+		hbox.getChildren().add(new Text("Start with predators"));
+		final CheckBox predatorCheckbox = new CheckBox();
+		predatorCheckbox.setSelected(true);
+		hbox.getChildren().add(predatorCheckbox);
+		
+		root.getChildren().add(hbox);
+		Button okButton = new Button("Ok");
+		okButton.setOnAction(new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent event) {
+				restart(predatorCheckbox.isSelected(), mainSimulatorStage);
+				configStage.hide();
+			}
+		});
+		root.getChildren().add(okButton);
+		configStage.show();
+	}
+	
+	private void restart(boolean predators, Stage mainSimulatorStage) {
 		FileChooser chooser = new FileChooser();
 		chooser.setTitle("Select the .class of your (not packaged) animal class");
-		File file = chooser.showOpenDialog(s);
+		File file = chooser.showOpenDialog(mainSimulatorStage);
 		if (file != null) {
 			String[] splits = file.getName().split("\\.");
 			if (splits.length == 2 && splits[1].equals("class") && !splits[0].equals("")) {
@@ -151,12 +186,12 @@ public class Main extends Application {
 					Object instance = constructor.newInstance(10, 20, simulator);
 
 					if (instance instanceof Animal) {
-						this.simulator = new Simulator(race);
+						this.simulator = new Simulator(race, predators);
 					} else {
 						errorMsg("It should extend Animal !");
 					}
 				} catch (ClassNotFoundException e) {
-					errorMsg("Error while loading class. Are you sure it was not in any package (i.e must be in default package) when it was compiled ? allmyAIs.BestAI.class would not work.");
+					errorMsg("Error while loading class. Are you sure it was not in any package (i.e must be in default package) when it was compiled ? allmyAIs.BestAI.class would not work. Also the class name must be the same as the one in the filename (ex : class Zebra in Zebra.class)");
 				} catch (SecurityException e) {
 					e.printStackTrace();
 				} catch (IllegalArgumentException e) {
@@ -171,25 +206,16 @@ public class Main extends Application {
 					e.printStackTrace();
 				}
 			} else {
-				errorMsg("Pick a file like my_own_subclass_of_Animal.class. Make sure it wasn't in a package when it was compiled.");
+				errorMsg("Pick a file like MyOwnSubclassOfAnimal.class. Make sure it wasn't in a package when it was compiled. Also the class name must be the same as the one in the filename (ex : class Zebra in Zebra.class)");
 			}
 		}
 	}
 	
 	
 	private void errorMsg(String msg) {
-		final Popup popup = new Popup();
-		popup.getContent().add(new Text());
-		Button okButton = new Button("Ok");
-		okButton.setOnAction(new EventHandler<ActionEvent>() {
-			@Override
-			public void handle(ActionEvent event) {
-				popup.hide();
-			}
-		});
-		popup.getContent().add(new Text(msg));
-		popup.getContent().add(okButton);
-		popup.show(stage);
+		Alert alert = new Alert(AlertType.ERROR, msg);
+		alert.setTitle("Nope !");
+		alert.show();
 	}
 
 	private void repaint() {
